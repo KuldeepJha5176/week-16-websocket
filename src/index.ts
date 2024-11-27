@@ -2,21 +2,27 @@ import { WebSocketServer, WebSocket } from "ws";
 
 const wss = new WebSocketServer({ port: 8080 });
 
-let userCount = 0;
-let allSockets: WebSocket[] = []
+interface User {
+  socket: WebSocket;
+  room: string;
+}
 
+
+const allSockets = new Map<string, User>();
 wss.on("connection", (socket) => {
-  allSockets.push(socket);
-  userCount = userCount + 1;
-  console.log("User connected #" + userCount);
-
+  
+    
   socket.on("message", (message) => {
-    console.log("message received " + message.toString());
-    setTimeout(() => {
-      for (let i = 0; i < allSockets.length; i++) {
-        const s = allSockets[i];
-        s.send(message.toString() + "message received from the server");
-      }
-    }, 1000);
+   const parsedMessage = JSON.parse(message);
+   if(parsedMessage.type == "join" ){
+    const socketId = parsedMessage.payload.userId || socket.protocol || generateUniqueId();
+    allSockets.set(socketId,
+      {socket,
+      room: parsedMessage.payload.roomId}
+    )
+   }
   });
+  function generateUniqueId(): string {
+    return Math.random().toString(36).substring(2, 15);
+  }
 });
